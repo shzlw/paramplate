@@ -1,0 +1,2 @@
+non-template file
+I have some parameters {{ }}
