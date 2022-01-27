@@ -10,6 +10,7 @@ const EMPTY_STR = '';
 const PARAMS_ARG = '--params';
 const SRC_ARG = '--src';
 const DEST_ARG = '--dest';
+const TEMPLATE_EXTENTION = '.pp';
 const BgGreen = "\x1b[42m";
 const Reset = "\x1b[0m";
 console.log(`${BgGreen}%s${Reset} %s`, "paramplate", "starts");
@@ -118,9 +119,10 @@ function isDir(pathname) {
     }
 }
 function isTemplateFile(filename) {
-    const mExt = filename.slice(-2);
-    if (mExt === '.pp') {
-        return filename.slice(0, -2);
+    const offset = TEMPLATE_EXTENTION.length;
+    const templateExt = filename.slice(-offset);
+    if (templateExt === TEMPLATE_EXTENTION) {
+        return filename.slice(0, -offset);
     }
     return null;
 }

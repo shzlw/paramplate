@@ -8,6 +8,8 @@ const PARAMS_ARG = '--params';
 const SRC_ARG = '--src';
 const DEST_ARG = '--dest';
 
+const TEMPLATE_EXTENSION = '.pp';
+
 const BgGreen = "\x1b[42m";
 const Reset = "\x1b[0m";
 
@@ -127,9 +129,10 @@ function isDir(pathname: string) {
 }
 
 function isTemplateFile(filename: string) {
-  const mExt = filename.slice(-2);
-  if (mExt === '.pp') {
-    return filename.slice(0, -2);
+  const offset = TEMPLATE_EXTENSION.length;
+  const templateExt = filename.slice(-offset);
+  if (templateExt === TEMPLATE_EXTENSION) {
+    return filename.slice(0, -offset);
   }
   return null;
 }
