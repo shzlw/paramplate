@@ -17,6 +17,7 @@ const INPUT_ARGS = {
     dest: '--dest',
     ext: '--ext',
 };
+// Start
 console.log(`# Validating inputs`);
 const { paramsDirs, srcDir, destDir, templateExt } = parseArgs();
 console.log(`- Src dir: ${srcDir}`);
@@ -81,7 +82,7 @@ function parseSrcDir(dir, paramsMap) {
                 const content = parseMustache(srcFile, paramsMap);
                 const diff = currDir.substring(srcDir.length);
                 const destFilePath = path_1.default.join(destDir, diff, originalFilename);
-                console.log(`- Template parsed -> ${destFilePath}`);
+                console.log(`- Parsed: ${destFilePath}`);
                 writeFile(destFilePath, content);
             }
         }
@@ -125,37 +126,37 @@ function isTemplateFile(filename) {
     }
     return null;
 }
-function parseMustache(file, paramsMap) {
-    let content = "";
+function parseMustache(fileInput, paramsMap) {
+    let fileOutput = "";
     let i = 0;
-    const size = file.length;
+    const size = fileInput.length;
     while (i < size) {
-        if (file[i] === '{' && (i + 1 < size) && file[i + 1] == '{') {
+        if (fileInput[i] === '{' && (i + 1 < size) && fileInput[i + 1] == '{') {
             let j = i + 2;
             let tag = '';
             while (j < size) {
-                if (file[j] == '}' && (j + 1 < size) && file[j + 1] == '}') {
+                if (fileInput[j] == '}' && (j + 1 < size) && fileInput[j + 1] == '}') {
                     const value = paramsMap.get(tag);
                     if (!value) {
                         logError(`${tag} cannot be found in the param files`);
                     }
-                    content += value;
+                    fileOutput += value;
                     i = j + 2;
                     tag = '';
                     break;
                 }
-                if (file[j] !== ' ') {
-                    tag += file[j];
+                if (fileInput[j] !== ' ') {
+                    tag += fileInput[j];
                 }
                 j++;
             }
         }
         if (i < size) {
-            content += file[i];
+            fileOutput += fileInput[i];
             i++;
         }
     }
-    return content;
+    return fileOutput;
 }
 function loadParams(pathname, paramsMap) {
     const file = fs_1.default.readFileSync(pathname, 'utf8').toString();
@@ -181,8 +182,9 @@ function flattenObject(obj, path, map) {
     }
     else {
         // obj is value
-        if (map.has(path)) {
-            logWarning(`${path} is overwritten`);
+        if (map.has(path) && map.get(path) !== obj) {
+            const oldValue = map.get(path);
+            logWarning(`${path} is overwritten from: ${oldValue} to ${obj}`);
         }
         map.set(path, obj);
     }

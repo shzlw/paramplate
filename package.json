@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "npx tsc",
-    "test": "rimraf ./test/output & ts-node src/index.ts --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root & node ./test/cli-test.js",
-    "publish": "npx tsc & npm publish"
+    "test": "rimraf ./test/output & ts-node src/index.ts --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root & node ./test/cli-test.js"
   },
   "bin": {
     "paramplate": "./bin/index.js"
