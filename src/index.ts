@@ -3,70 +3,77 @@
 import fs from 'fs';
 import path from 'path';
 
-const EMPTY_STR = '';
 const PARAMS_ARG = '--params';
 const SRC_ARG = '--src';
 const DEST_ARG = '--dest';
+const EXT_ARG = '--ext';
 
-const TEMPLATE_EXTENSION = '.pp';
+const DEFAULT_EXT = '.pp';
 
-const BgGreen = "\x1b[42m";
-const Reset = "\x1b[0m";
+const bgYellow = "\x1b[43m"
+const bgBlue = "\x1b[44m"
+const bgMagenta = "\x1b[45m"
+const bgCyan = "\x1b[46m"
+const bgRed = "\x1b[41m";
+const bgGreen = "\x1b[42m";
+const reset = "\x1b[0m";
 
-console.log(`${BgGreen}%s${Reset} %s`, "paramplate", "starts");
-// console.log(process.argv);
+console.log(`${bgGreen}%s${reset}`, 'Paramplate');
 
-const argsMap = new Map<string, string>();
-argsMap.set(PARAMS_ARG, EMPTY_STR);
-argsMap.set(SRC_ARG, EMPTY_STR);
-argsMap.set(DEST_ARG, EMPTY_STR);
+const {
+  paramsDirs,
+  srcDir,
+  destDir,
+  templateExt
+} = parseArgs();
 
-const args = process.argv.slice(2);
-for (let i = 0; i < args.length - 1; i = i + 2) {
-  const key = args[i];
-  let value = args[i + 1];
-  if (key === SRC_ARG || key === DEST_ARG) {
-    value = path.resolve(path.normalize(value));
-  }
-  argsMap.set(key, value);
-}
+console.log(`${bgGreen}Src dir${reset} ${srcDir}`);
+console.log(`${bgGreen}Dest dir${reset} ${destDir}`);
+console.log(`${bgGreen}Template ext${reset} ${templateExt}`);
 
-const currWorkDir = process.cwd();
-console.log("currWorkDir", currWorkDir);
-
-let srcDir = '';
-if (argsMap.get(SRC_ARG) === EMPTY_STR) {
-  srcDir = currWorkDir;
-} else {
-  srcDir = argsMap.get(SRC_ARG) || EMPTY_STR;
-}
-
-let destDir = '';
-if (argsMap.get(DEST_ARG) === EMPTY_STR) {
-  destDir = currWorkDir;
-} else {
-  destDir = argsMap.get(DEST_ARG) || EMPTY_STR;
-}
-
-const paramsFilePaths = argsMap.get(PARAMS_ARG) || EMPTY_STR;
-if (paramsFilePaths === EMPTY_STR) {
-  console.error("--params cannot be empty");
-  process.exit(0);
-}
-// Parse file
-const paramsFiles = paramsFilePaths.split(',');
+const paramsFiles = paramsDirs.split(',');
 const paramsMap = new Map<string, string>();
 paramsFiles.forEach((paramsPath) => {
+  console.log(`${bgGreen}Load param file${reset} ${paramsPath}`);
   loadParams(paramsPath, paramsMap);
 })
 
-console.log("Params");
-for (let [key, value] of paramsMap) {
-  console.log(key + "=" + value);
+parseSrcDir(srcDir, paramsMap);
+
+console.log(`${bgGreen}%s${reset}`, "Done!");
+
+interface Args {
+  paramsDirs: string,
+  srcDir: string,
+  destDir: string,
+  templateExt: string
 }
 
-parseSrcDir(srcDir, paramsMap);
-console.log(`${BgGreen}%s${Reset} %s`, "paramplate", "ends");
+function parseArgs(): Args {
+  const argsMap = new Map<string, string>();
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length - 1; i = i + 2) {
+    const key = args[i];
+    let value = args[i + 1];
+    if (key === SRC_ARG || key === DEST_ARG) {
+      value = path.resolve(path.normalize(value));
+    }
+    argsMap.set(key, value);
+  }
+
+  const srcDir = validateInput(SRC_ARG, argsMap);
+  const destDir = validateInput(DEST_ARG, argsMap);
+  const paramsDirs = validateInput(PARAMS_ARG, argsMap);
+  const templateExt = validateInput(EXT_ARG, argsMap, DEFAULT_EXT);
+
+  return {
+    paramsDirs,
+    srcDir,
+    destDir,
+    templateExt
+  };
+}
+
 
 function parseSrcDir(dir: string, paramsMap: Map<string, any>) {
   fs.readdirSync(dir).forEach((file: string) => {
@@ -78,7 +85,6 @@ function parseSrcDir(dir: string, paramsMap: Map<string, any>) {
       parseSrcDir(fullPath, paramsMap);
     } else {
       const currDir = path.dirname(fullPath);
-
       const filename = path.basename(fullPath);
       const originalFilename = isTemplateFile(filename);
 
@@ -89,10 +95,10 @@ function parseSrcDir(dir: string, paramsMap: Map<string, any>) {
         writeFile(destFilePath, srcFile);
       } else {
         const content = parseMustache(srcFile, paramsMap);
-
         const diff = currDir.substring(srcDir.length);
         const destFilePath = path.join(destDir, diff, originalFilename);
 
+        console.log(`${bgGreen}Template parsed${reset} ${destFilePath}`);
         writeFile(destFilePath, content);
       }
     }  
@@ -105,7 +111,7 @@ function writeFile(pathname: string, content: string) {
     mkdir(currDir);
     fs.writeFileSync(pathname, content);
   } catch (err) {
-    console.error(err);
+    logError(err);
   }
 }
 
@@ -115,7 +121,7 @@ function mkdir(pathname: string) {
       fs.mkdirSync(pathname, { recursive: true });
     }
   } catch (err) {
-    console.error(err);
+    logError(err);
   }
 }
 
@@ -124,14 +130,15 @@ function isDir(pathname: string) {
     const stat = fs.lstatSync(pathname);
     return stat.isDirectory();
   } catch (err) {
+    logError(err);
     return false;
   }
 }
 
 function isTemplateFile(filename: string) {
-  const offset = TEMPLATE_EXTENSION.length;
-  const templateExt = filename.slice(-offset);
-  if (templateExt === TEMPLATE_EXTENSION) {
+  const offset = templateExt.length;
+  const ext = filename.slice(-offset);
+  if (ext === templateExt) {
     return filename.slice(0, -offset);
   }
   return null;
@@ -148,7 +155,11 @@ function parseMustache(file: string, paramsMap: Map<string, string>) {
       let tag = '';
       while (j < size) {
         if (file[j] == '}' && (j + 1 < size) && file[j + 1] == '}') {
-          content += paramsMap.get(tag);
+          const value = paramsMap.get(tag);
+          if (!value) {
+            logError(`${tag} cannot be found in the param files`);
+          }
+          content += value;
           i = j + 2;
           tag = '';
           break;
@@ -194,6 +205,26 @@ function flattenObject(obj: any, path: string, map: Map<string, string>) {
     }
   } else {
     // obj is value
+    if (map.has(path)) {
+      console.log(`${bgYellow}Param overwritten${reset} ${path}`);
+    }
     map.set(path, obj);
   }
+}
+
+function validateInput(param: string, argsMap: Map<string, string>, defaultValue?: string): string {
+  const value = argsMap.get(param);
+  if (!value) {
+    if (defaultValue) {
+      return defaultValue;
+    }
+
+    logError(`${value} value is required`);
+    process.exit(0);
+  }
+  return value;
+}
+
+function logError(error: any) {
+  console.error(`${bgRed}Error${reset} ${error}`);
 }
