@@ -1,12 +1,13 @@
 {
   "name": "paramplate",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "Simple code generator",
   "main": "bin/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "npx tsc",
-    "local": "rimraf ./test/output & ts-node src/index.ts --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root"
+    "test": "rimraf ./test/output & ts-node src/index.ts --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root & node ./test/cli-test.js",
+    "publish": "npx tsc & npm publish"
   },
   "bin": {
     "paramplate": "./bin/index.js"
@@ -17,7 +18,8 @@
   },
   "keywords": [
     "cli",
-    "code-generator"
+    "code-generator",
+    "template"
   ],
   "author": "Zhonglu Wang",
   "license": "MIT",
@@ -31,6 +33,5 @@
     "typescript": "^4.3.5",
     "rimraf": "^3.0.2"
   },
-  "dependencies": {},
   "files": ["dist"]
 }

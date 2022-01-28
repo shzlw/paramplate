@@ -1,1 +1,5 @@
-non-template
+this is a non-template file
+
+One param is defined {{ param.nestedParam1 }} but should not be parsed
+
+One more line....

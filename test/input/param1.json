@@ -1,6 +1,13 @@
 {
-  "user": {
-    "name1": 111
+  "param": {
+    "nestedParam1": "nestedParam1",
+    "nestedParam2": {
+      "nestedParam3": "nestedParam3"
+    }
   },
-  "name1": "333"
+  "value": "value",
+  "array": [
+    "element1",
+    "element2"
+  ]
 }

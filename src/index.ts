@@ -3,23 +3,21 @@
 import fs from 'fs';
 import path from 'path';
 
-const PARAMS_ARG = '--params';
-const SRC_ARG = '--src';
-const DEST_ARG = '--dest';
-const EXT_ARG = '--ext';
+const COLORS = {
+  reset: '\x1b[0m',
+  fgRed: '\x1b[31m',
+  fgYellow: '\x1b[33m'
+}
 
-const DEFAULT_EXT = '.pp';
+const INPUT_ARGS = {
+  params: '--params',
+  src: '--src',
+  dest: '--dest',
+  ext: '--ext',
+}
 
-const bgYellow = "\x1b[43m"
-const bgBlue = "\x1b[44m"
-const bgMagenta = "\x1b[45m"
-const bgCyan = "\x1b[46m"
-const bgRed = "\x1b[41m";
-const bgGreen = "\x1b[42m";
-const reset = "\x1b[0m";
-
-console.log(`${bgGreen}%s${reset}`, 'Paramplate');
-
+// Start
+console.log(`# Validating inputs`);
 const {
   paramsDirs,
   srcDir,
@@ -27,20 +25,25 @@ const {
   templateExt
 } = parseArgs();
 
-console.log(`${bgGreen}Src dir${reset} ${srcDir}`);
-console.log(`${bgGreen}Dest dir${reset} ${destDir}`);
-console.log(`${bgGreen}Template ext${reset} ${templateExt}`);
+console.log(`- Src dir: ${srcDir}`);
+console.log(`- Dest dir: ${destDir}`);
+console.log(`- Template ext: ${templateExt}`);
 
 const paramsFiles = paramsDirs.split(',');
 const paramsMap = new Map<string, string>();
-paramsFiles.forEach((paramsPath) => {
-  console.log(`${bgGreen}Load param file${reset} ${paramsPath}`);
+paramsFiles.forEach((p) => {
+  const paramsPath = path.resolve(path.normalize(p));
+  console.log(`- Param file: ${paramsPath}`);
   loadParams(paramsPath, paramsMap);
-})
+});
+console.log();
 
+console.log(`# Parsing input dir`);
 parseSrcDir(srcDir, paramsMap);
+console.log();
 
-console.log(`${bgGreen}%s${reset}`, "Done!");
+console.log('# Done!');
+// End
 
 interface Args {
   paramsDirs: string,
@@ -50,21 +53,23 @@ interface Args {
 }
 
 function parseArgs(): Args {
+  const { params, src, dest, ext } = INPUT_ARGS;
+  const defaultExt = '.pp';
   const argsMap = new Map<string, string>();
   const args = process.argv.slice(2);
   for (let i = 0; i < args.length - 1; i = i + 2) {
     const key = args[i];
     let value = args[i + 1];
-    if (key === SRC_ARG || key === DEST_ARG) {
+    if (key === src || key === dest) {
       value = path.resolve(path.normalize(value));
     }
     argsMap.set(key, value);
   }
 
-  const srcDir = validateInput(SRC_ARG, argsMap);
-  const destDir = validateInput(DEST_ARG, argsMap);
-  const paramsDirs = validateInput(PARAMS_ARG, argsMap);
-  const templateExt = validateInput(EXT_ARG, argsMap, DEFAULT_EXT);
+  const srcDir = validateInput(src, argsMap);
+  const destDir = validateInput(dest, argsMap);
+  const paramsDirs = validateInput(params, argsMap);
+  const templateExt = validateInput(ext, argsMap, defaultExt);
 
   return {
     paramsDirs,
@@ -98,7 +103,7 @@ function parseSrcDir(dir: string, paramsMap: Map<string, any>) {
         const diff = currDir.substring(srcDir.length);
         const destFilePath = path.join(destDir, diff, originalFilename);
 
-        console.log(`${bgGreen}Template parsed${reset} ${destFilePath}`);
+        console.log(`- Parsed: ${destFilePath}`);
         writeFile(destFilePath, content);
       }
     }  
@@ -144,29 +149,29 @@ function isTemplateFile(filename: string) {
   return null;
 }
 
-function parseMustache(file: string, paramsMap: Map<string, string>) {
-  let content = "";
+function parseMustache(fileInput: string, paramsMap: Map<string, string>) {
+  let fileOutput = "";
 
   let i = 0;
-  const size = file.length;
+  const size = fileInput.length;
   while (i < size) {
-    if (file[i] === '{' && (i + 1 < size) && file[i + 1] == '{') {
+    if (fileInput[i] === '{' && (i + 1 < size) && fileInput[i + 1] == '{') {
       let j = i + 2;
       let tag = '';
       while (j < size) {
-        if (file[j] == '}' && (j + 1 < size) && file[j + 1] == '}') {
+        if (fileInput[j] == '}' && (j + 1 < size) && fileInput[j + 1] == '}') {
           const value = paramsMap.get(tag);
           if (!value) {
             logError(`${tag} cannot be found in the param files`);
           }
-          content += value;
+          fileOutput += value;
           i = j + 2;
           tag = '';
           break;
         }
 
-        if (file[j] !== ' ') {
-          tag += file[j];
+        if (fileInput[j] !== ' ') {
+          tag += fileInput[j];
         }
 
         j++;
@@ -174,12 +179,12 @@ function parseMustache(file: string, paramsMap: Map<string, string>) {
     }
 
     if (i < size) {
-      content += file[i];
+      fileOutput += fileInput[i];
       i++;
     }
   }
 
-  return content;
+  return fileOutput;
 }
 
 function loadParams(pathname: string, paramsMap: Map<string, string>) {
@@ -205,8 +210,9 @@ function flattenObject(obj: any, path: string, map: Map<string, string>) {
     }
   } else {
     // obj is value
-    if (map.has(path)) {
-      console.log(`${bgYellow}Param overwritten${reset} ${path}`);
+    if (map.has(path) && map.get(path) !== obj) {
+      const oldValue = map.get(path);
+      logWarning(`${path} is overwritten from: ${oldValue} to ${obj}`);
     }
     map.set(path, obj);
   }
@@ -225,6 +231,10 @@ function validateInput(param: string, argsMap: Map<string, string>, defaultValue
   return value;
 }
 
-function logError(error: any) {
-  console.error(`${bgRed}Error${reset} ${error}`);
+function logError(log: any, type = 'ERROR') {
+  console.error(`${COLORS.fgRed}${type}${COLORS.reset} ${log}`);
+}
+
+function logWarning(log: any, type = 'WARNING') {
+  console.log(`${COLORS.fgYellow}${type}${COLORS.reset} ${log}`);
 }

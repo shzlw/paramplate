@@ -1,5 +1,15 @@
 {
-  "user": {
-    "name1": 222
-  }
+  "param": {
+    "nestedParam1": "nestedParam1",
+    "nestedParam2": {
+      "nestedParam3": "overwritten"
+    }
+  },
+  "value": "value",
+  "array": [
+    "element1",
+    "overwritten",
+    "additionalValue"
+  ],
+  "additionalValue": "additionalValue"
 }

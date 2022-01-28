@@ -6,61 +6,58 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const EMPTY_STR = '';
-const PARAMS_ARG = '--params';
-const SRC_ARG = '--src';
-const DEST_ARG = '--dest';
-const TEMPLATE_EXTENTION = '.pp';
-const BgGreen = "\x1b[42m";
-const Reset = "\x1b[0m";
-console.log(`${BgGreen}%s${Reset} %s`, "paramplate", "starts");
-// console.log(process.argv);
-const argsMap = new Map();
-argsMap.set(PARAMS_ARG, EMPTY_STR);
-argsMap.set(SRC_ARG, EMPTY_STR);
-argsMap.set(DEST_ARG, EMPTY_STR);
-const args = process.argv.slice(2);
-for (let i = 0; i < args.length - 1; i = i + 2) {
-    const key = args[i];
-    let value = args[i + 1];
-    if (key === SRC_ARG || key === DEST_ARG) {
-        value = path_1.default.resolve(path_1.default.normalize(value));
-    }
-    argsMap.set(key, value);
-}
-const currWorkDir = process.cwd();
-console.log("currWorkDir", currWorkDir);
-let srcDir = '';
-if (argsMap.get(SRC_ARG) === EMPTY_STR) {
-    srcDir = currWorkDir;
-}
-else {
-    srcDir = argsMap.get(SRC_ARG) || EMPTY_STR;
-}
-let destDir = '';
-if (argsMap.get(DEST_ARG) === EMPTY_STR) {
-    destDir = currWorkDir;
-}
-else {
-    destDir = argsMap.get(DEST_ARG) || EMPTY_STR;
-}
-const paramsFilePaths = argsMap.get(PARAMS_ARG) || EMPTY_STR;
-if (paramsFilePaths === EMPTY_STR) {
-    console.error("--params cannot be empty");
-    process.exit(0);
-}
-// Parse file
-const paramsFiles = paramsFilePaths.split(',');
+const COLORS = {
+    reset: '\x1b[0m',
+    fgRed: '\x1b[31m',
+    fgYellow: '\x1b[33m'
+};
+const INPUT_ARGS = {
+    params: '--params',
+    src: '--src',
+    dest: '--dest',
+    ext: '--ext',
+};
+console.log(`# Validating inputs`);
+const { paramsDirs, srcDir, destDir, templateExt } = parseArgs();
+console.log(`- Src dir: ${srcDir}`);
+console.log(`- Dest dir: ${destDir}`);
+console.log(`- Template ext: ${templateExt}`);
+const paramsFiles = paramsDirs.split(',');
 const paramsMap = new Map();
-paramsFiles.forEach((paramsPath) => {
+paramsFiles.forEach((p) => {
+    const paramsPath = path_1.default.resolve(path_1.default.normalize(p));
+    console.log(`- Param file: ${paramsPath}`);
     loadParams(paramsPath, paramsMap);
 });
-console.log("Params");
-for (let [key, value] of paramsMap) {
-    console.log(key + "=" + value);
-}
+console.log();
+console.log(`# Parsing input dir`);
 parseSrcDir(srcDir, paramsMap);
-console.log(`${BgGreen}%s${Reset} %s`, "paramplate", "ends");
+console.log();
+console.log('# Done!');
+function parseArgs() {
+    const { params, src, dest, ext } = INPUT_ARGS;
+    const defaultExt = '.pp';
+    const argsMap = new Map();
+    const args = process.argv.slice(2);
+    for (let i = 0; i < args.length - 1; i = i + 2) {
+        const key = args[i];
+        let value = args[i + 1];
+        if (key === src || key === dest) {
+            value = path_1.default.resolve(path_1.default.normalize(value));
+        }
+        argsMap.set(key, value);
+    }
+    const srcDir = validateInput(src, argsMap);
+    const destDir = validateInput(dest, argsMap);
+    const paramsDirs = validateInput(params, argsMap);
+    const templateExt = validateInput(ext, argsMap, defaultExt);
+    return {
+        paramsDirs,
+        srcDir,
+        destDir,
+        templateExt
+    };
+}
 function parseSrcDir(dir, paramsMap) {
     fs_1.default.readdirSync(dir).forEach((file) => {
         let fullPath = path_1.default.join(dir, file);
@@ -84,6 +81,7 @@ function parseSrcDir(dir, paramsMap) {
                 const content = parseMustache(srcFile, paramsMap);
                 const diff = currDir.substring(srcDir.length);
                 const destFilePath = path_1.default.join(destDir, diff, originalFilename);
+                console.log(`- Template parsed -> ${destFilePath}`);
                 writeFile(destFilePath, content);
             }
         }
@@ -96,7 +94,7 @@ function writeFile(pathname, content) {
         fs_1.default.writeFileSync(pathname, content);
     }
     catch (err) {
-        console.error(err);
+        logError(err);
     }
 }
 function mkdir(pathname) {
@@ -106,7 +104,7 @@ function mkdir(pathname) {
         }
     }
     catch (err) {
-        console.error(err);
+        logError(err);
     }
 }
 function isDir(pathname) {
@@ -115,13 +113,14 @@ function isDir(pathname) {
         return stat.isDirectory();
     }
     catch (err) {
+        logError(err);
         return false;
     }
 }
 function isTemplateFile(filename) {
-    const offset = TEMPLATE_EXTENTION.length;
-    const templateExt = filename.slice(-offset);
-    if (templateExt === TEMPLATE_EXTENTION) {
+    const offset = templateExt.length;
+    const ext = filename.slice(-offset);
+    if (ext === templateExt) {
         return filename.slice(0, -offset);
     }
     return null;
@@ -136,7 +135,11 @@ function parseMustache(file, paramsMap) {
             let tag = '';
             while (j < size) {
                 if (file[j] == '}' && (j + 1 < size) && file[j + 1] == '}') {
-                    content += paramsMap.get(tag);
+                    const value = paramsMap.get(tag);
+                    if (!value) {
+                        logError(`${tag} cannot be found in the param files`);
+                    }
+                    content += value;
                     i = j + 2;
                     tag = '';
                     break;
@@ -178,6 +181,26 @@ function flattenObject(obj, path, map) {
     }
     else {
         // obj is value
+        if (map.has(path)) {
+            logWarning(`${path} is overwritten`);
+        }
         map.set(path, obj);
     }
+}
+function validateInput(param, argsMap, defaultValue) {
+    const value = argsMap.get(param);
+    if (!value) {
+        if (defaultValue) {
+            return defaultValue;
+        }
+        logError(`${value} value is required`);
+        process.exit(0);
+    }
+    return value;
+}
+function logError(log, type = 'ERROR') {
+    console.error(`${COLORS.fgRed}${type}${COLORS.reset} ${log}`);
+}
+function logWarning(log, type = 'WARNING') {
+    console.log(`${COLORS.fgYellow}${type}${COLORS.reset} ${log}`);
 }
