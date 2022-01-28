@@ -1,5 +1,9 @@
 # Paramplate
 
+[![license: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/paramplate.svg)](https://www.npmjs.com/package/paramplate)
+
+
 Paramplate is a node CLI tool for code generation.
 
 ## How it works
