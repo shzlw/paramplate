@@ -3,7 +3,7 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/paramplate.svg)](https://www.npmjs.com/package/paramplate)
 
-Paramplate is a node CLI tool for code generation. It takes in values from parameter files, parses the template files and produces output files with rendered strings. The benefit of the tool is that you can use a centralized parameter file to power multiple template files to reduce repetitive work and avoid manual errors. 
+Paramplate is a node CLI tool for code generation. It takes in values from parameter files, parses the template files and produces output files with rendered strings. The benefit of the tool is that you can use centralized parameter files and template files for scaffolding which  reduces repetitive work and avoids manual errors. 
 
 ## How it works
 Here is a basic setup.
@@ -98,7 +98,7 @@ For example,
 ```
 
 #### --ext
-Optional. Define the template file extension. After the template file is parsed, the template file extension will be removed in the destination directory. The default value is ".pp". For example,
+Optional. Define the template file extension. After the template file is parsed, the template file extension will be removed in the destination directory. The default value is ".pp". For example, the template file can be my-config.yaml.customExt. After being parsed, the file generated is my-config.yaml.
 ```bash
 --ext .customExt
 ```
