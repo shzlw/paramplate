@@ -3,7 +3,7 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/paramplate.svg)](https://www.npmjs.com/package/paramplate)
 
-Paramplate is a node CLI tool for code generation. It takes in values from parameter files, parses the template files and produce output files with rendered strings. The benefit of the tool is that you can use a centralized parameter file to power multiple template files to reduce repetitive work and avoid manual errors. 
+Paramplate is a node CLI tool for code generation. It takes in values from parameter files, parses the template files and produces output files with rendered strings. The benefit of the tool is that you can use a centralized parameter file to power multiple template files to reduce repetitive work and avoid manual errors. 
 
 ## How it works
 Here is a basic setup.
