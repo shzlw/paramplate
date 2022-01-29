@@ -3,20 +3,20 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/paramplate.svg)](https://www.npmjs.com/package/paramplate)
 
-
-Paramplate is a node CLI tool for code generation.
+Paramplate is a node CLI tool for code generation. It takes in values from parameter files, parses the template files and produce output files with rendered strings. The benefit of the tool is that you can use a centralized parameter file to power multiple template files to reduce repetitive work and avoid manual errors. 
 
 ## How it works
-For exmaple, we have a project folder which contains a parameter file and a template file.
+Here is a basic setup.
 
 ``` bash
 projct
 |-- param.json
 |-- input
     |-- template.yaml.pp
+|-- output
 ```
 
-project/param.json
+project/param.json contains all the parameters.
 ```json
 {
   "app": {
@@ -30,7 +30,7 @@ project/param.json
 }
 ```
 
-project/input/template.yaml.pp
+project/input/template.yaml.pp is the template file.
 ```yaml
 name: {{ app.name }}
 envs:
@@ -45,7 +45,7 @@ Run the paramplate command.
 npx paramplate --params project/param.json --src project/input --dest project/output
 ```
 
-It generates a new file with values fullfilled: project/output/template.yaml
+It generates a new file with values rendered: project/output/template.yaml
 ```yaml
 name: app1
 envs:
@@ -63,14 +63,18 @@ The CLI does a few things here:
 ## Install & Run
 Prerequisites
 * node installed
-* create your parameter json file and define input/output directories
+* create your parameter json files, template files and define input/output directories
 
-For example
+Use npx
 ```bash
 npx paramplate --params param.json --src /input --dest /output
 ```
 
-
+Use npm
+```bash
+npm install paramplate -g
+paramplate --params param.json --src /input --dest /output
+```
 
 ## Cli arguments
 
