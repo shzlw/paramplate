@@ -79,10 +79,10 @@ function parseSrcDir(dir, paramsMap) {
                 writeFile(destFilePath, srcFile);
             }
             else {
+                console.log(`- Parsing: ${fullPath}`);
                 const content = parseMustache(srcFile, paramsMap);
                 const diff = currDir.substring(srcDir.length);
                 const destFilePath = path_1.default.join(destDir, diff, originalFilename);
-                console.log(`- Parsed: ${destFilePath}`);
                 writeFile(destFilePath, content);
             }
         }
