@@ -80,9 +80,9 @@ function parseArgs(): Args {
 }
 
 
-function parseSrcDir(dir: string, paramsMap: Map<string, any>) {
+function parseSrcDir(dir: string, paramsMap: Map<string, string>) {
   fs.readdirSync(dir).forEach((file: string) => {
-    let fullPath = path.join(dir, file);
+    const fullPath = path.join(dir, file);
     if (isDir(fullPath)) {
       const diff = fullPath.substring(srcDir.length);
       const destFilePath = path.join(destDir, diff);
@@ -202,7 +202,7 @@ function flattenObject(obj: any, path: string, map: Map<string, string>) {
       });
     } else {
       // obj is object
-      let pathPrefix = path === '' ? '' : path + '.';
+      const pathPrefix = path === '' ? '' : path + '.';
       Object.keys(obj).forEach((key) => {
         const nextObj = obj[key];
         flattenObject(nextObj, pathPrefix + key, map);

@@ -61,7 +61,7 @@ function parseArgs() {
 }
 function parseSrcDir(dir, paramsMap) {
     fs_1.default.readdirSync(dir).forEach((file) => {
-        let fullPath = path_1.default.join(dir, file);
+        const fullPath = path_1.default.join(dir, file);
         if (isDir(fullPath)) {
             const diff = fullPath.substring(srcDir.length);
             const destFilePath = path_1.default.join(destDir, diff);
@@ -173,7 +173,7 @@ function flattenObject(obj, path, map) {
         }
         else {
             // obj is object
-            let pathPrefix = path === '' ? '' : path + '.';
+            const pathPrefix = path === '' ? '' : path + '.';
             Object.keys(obj).forEach((key) => {
                 const nextObj = obj[key];
                 flattenObject(nextObj, pathPrefix + key, map);

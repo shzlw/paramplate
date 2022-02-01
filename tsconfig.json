@@ -9,5 +9,5 @@
     "outDir": "bin"
   },
   "include": ["src/*"],
-  "exclude": ["bin/*", "test/*"]
+  "exclude": ["node_modules", "bin/*", "test/*"]
 }
