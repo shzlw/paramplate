@@ -16,47 +16,73 @@ const INPUT_ARGS = {
     src: '--src',
     dest: '--dest',
     ext: '--ext',
+    debug: '--debug'
 };
 // Start
-console.log(`# Validating inputs`);
-const { paramsDirs, srcDir, destDir, templateExt } = parseArgs();
-console.log(`- Src dir: ${srcDir}`);
-console.log(`- Dest dir: ${destDir}`);
-console.log(`- Template ext: ${templateExt}`);
+console.log('################');
+console.log('Hello paramplate');
+console.log('################');
+console.log();
+const { paramsDirs, srcDir, destDir, templateExt, isDebug } = parseArgs();
+debugLog(`# Inputs`, isDebug);
+debugLog(`- Src dir: ${srcDir}`, isDebug);
+debugLog(`- Dest dir: ${destDir}`, isDebug);
+debugLog(`- Template ext: ${templateExt}`, isDebug);
 const paramsFiles = paramsDirs.split(',');
 const paramsMap = new Map();
 paramsFiles.forEach((p) => {
     const paramsPath = path_1.default.resolve(path_1.default.normalize(p));
-    console.log(`- Param file: ${paramsPath}`);
+    debugLog(`- Param file: ${paramsPath}`, isDebug);
     loadParams(paramsPath, paramsMap);
 });
+if (isDebug) {
+    console.log();
+    console.log('# All parameters');
+    for (let [key, value] of paramsMap) {
+        console.log(key + " = " + value);
+    }
+}
 console.log();
-console.log(`# Parsing input dir`);
 parseSrcDir(srcDir, paramsMap);
 console.log();
 console.log('# Done!');
 function parseArgs() {
-    const { params, src, dest, ext } = INPUT_ARGS;
+    const { params, src, dest, ext, debug } = INPUT_ARGS;
     const defaultExt = '.pp';
+    const isDebugYes = 'y';
     const argsMap = new Map();
     const args = process.argv.slice(2);
-    for (let i = 0; i < args.length - 1; i = i + 2) {
+    let i = 0;
+    while (i < args.length) {
         const key = args[i];
-        let value = args[i + 1];
-        if (key === src || key === dest) {
-            value = path_1.default.resolve(path_1.default.normalize(value));
+        if (key === debug) {
+            argsMap.set(key, isDebugYes);
+            i++;
         }
-        argsMap.set(key, value);
+        else if (i + 1 < args.length) {
+            let value = args[i + 1];
+            if (key === src || key === dest) {
+                value = path_1.default.resolve(path_1.default.normalize(value));
+            }
+            argsMap.set(key, value);
+            i = i + 2;
+        }
+        else {
+            logError(`Invalid args: ${key}`);
+            process.exit(0);
+        }
     }
     const srcDir = validateInput(src, argsMap);
     const destDir = validateInput(dest, argsMap);
     const paramsDirs = validateInput(params, argsMap);
     const templateExt = validateInput(ext, argsMap, defaultExt);
+    const isDebug = validateInput(debug, argsMap) === isDebugYes ? true : false;
     return {
         paramsDirs,
         srcDir,
         destDir,
-        templateExt
+        templateExt,
+        isDebug
     };
 }
 function parseSrcDir(dir, paramsMap) {
@@ -138,7 +164,7 @@ function parseMustache(fileInput, paramsMap) {
                 if (fileInput[j] == '}' && (j + 1 < size) && fileInput[j + 1] == '}') {
                     const value = paramsMap.get(tag);
                     if (!value) {
-                        logError(`${tag} cannot be found in the param files`);
+                        logError(`Missing param: ${tag}`);
                     }
                     fileOutput += value;
                     i = j + 2;
@@ -184,7 +210,7 @@ function flattenObject(obj, path, map) {
         // obj is value
         if (map.has(path) && map.get(path) !== obj) {
             const oldValue = map.get(path);
-            logWarning(`${path} is overwritten from: ${oldValue} to ${obj}`);
+            logWarning(`Param overwritten: ${path} ${oldValue} => ${obj}`);
         }
         map.set(path, obj);
     }
@@ -199,6 +225,11 @@ function validateInput(param, argsMap, defaultValue) {
         process.exit(0);
     }
     return value;
+}
+function debugLog(log, isDebug = false) {
+    if (isDebug) {
+        console.log(log);
+    }
 }
 function logError(log, type = 'ERROR') {
     console.error(`${COLORS.fgRed}${type}${COLORS.reset} ${log}`);

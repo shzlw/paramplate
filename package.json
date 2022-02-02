@@ -1,13 +1,13 @@
 {
   "name": "paramplate",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Simple code generator",
   "main": "bin/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "npx tsc",
     "lint": "eslint . --ext .ts",
-    "test": "rimraf ./test/output & npm run build & node ./bin/index.js --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root & node ./test/cli-e2e.js"
+    "test": "rimraf ./test/output & npm run build & node ./bin/index.js --debug --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root & node ./test/cli-e2e.js"
   },
   "bin": {
     "paramplate": "./bin/index.js"

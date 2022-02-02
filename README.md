@@ -103,6 +103,12 @@ Optional. Define the template file extension. After the template file is parsed,
 --ext .customExt
 ```
 
+#### --debug
+Optional. Turn on debug logging.
+```bash
+--debug
+```
+
 ## Templating
 All objects defined in the parameter json files are flattened and stored in a Map which are used to match the mustache styled template. Json objects and array are supported.
 

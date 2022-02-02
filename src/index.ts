@@ -14,31 +14,45 @@ const INPUT_ARGS = {
   src: '--src',
   dest: '--dest',
   ext: '--ext',
+  debug: '--debug'
 }
 
 // Start
-console.log(`# Validating inputs`);
+console.log('################');
+console.log('Hello paramplate');
+console.log('################');
+console.log();
+
 const {
   paramsDirs,
   srcDir,
   destDir,
-  templateExt
+  templateExt,
+  isDebug
 } = parseArgs();
 
-console.log(`- Src dir: ${srcDir}`);
-console.log(`- Dest dir: ${destDir}`);
-console.log(`- Template ext: ${templateExt}`);
+debugLog(`# Inputs`, isDebug);
+debugLog(`- Src dir: ${srcDir}`, isDebug);
+debugLog(`- Dest dir: ${destDir}`, isDebug);
+debugLog(`- Template ext: ${templateExt}`, isDebug);
 
 const paramsFiles = paramsDirs.split(',');
 const paramsMap = new Map<string, string>();
 paramsFiles.forEach((p) => {
   const paramsPath = path.resolve(path.normalize(p));
-  console.log(`- Param file: ${paramsPath}`);
+  debugLog(`- Param file: ${paramsPath}`, isDebug);
   loadParams(paramsPath, paramsMap);
 });
+
+if (isDebug) {
+  console.log();
+  console.log('# All parameters');
+  for (let [key, value] of paramsMap) {
+    console.log(key + " = " + value);
+  }
+}
 console.log();
 
-console.log(`# Parsing input dir`);
 parseSrcDir(srcDir, paramsMap);
 console.log();
 
@@ -49,36 +63,49 @@ interface Args {
   paramsDirs: string,
   srcDir: string,
   destDir: string,
-  templateExt: string
+  templateExt: string,
+  isDebug: boolean
 }
 
 function parseArgs(): Args {
-  const { params, src, dest, ext } = INPUT_ARGS;
+  const { params, src, dest, ext, debug } = INPUT_ARGS;
   const defaultExt = '.pp';
+  const isDebugYes = 'y';
   const argsMap = new Map<string, string>();
   const args = process.argv.slice(2);
-  for (let i = 0; i < args.length - 1; i = i + 2) {
+  let i = 0;
+  while (i < args.length) {
     const key = args[i];
-    let value = args[i + 1];
-    if (key === src || key === dest) {
-      value = path.resolve(path.normalize(value));
+    if (key === debug) {
+      argsMap.set(key, isDebugYes);
+      i++;
+    } else if (i + 1 < args.length) {
+      let value = args[i + 1];
+      if (key === src || key === dest) {
+        value = path.resolve(path.normalize(value));
+      }
+      argsMap.set(key, value);
+      i = i + 2;
+    } else {
+      logError(`Invalid args: ${key}`);
+      process.exit(0);
     }
-    argsMap.set(key, value);
   }
 
   const srcDir = validateInput(src, argsMap);
   const destDir = validateInput(dest, argsMap);
   const paramsDirs = validateInput(params, argsMap);
   const templateExt = validateInput(ext, argsMap, defaultExt);
+  const isDebug = validateInput(debug, argsMap) === isDebugYes ? true : false;
 
   return {
     paramsDirs,
     srcDir,
     destDir,
-    templateExt
+    templateExt,
+    isDebug
   };
 }
-
 
 function parseSrcDir(dir: string, paramsMap: Map<string, string>) {
   fs.readdirSync(dir).forEach((file: string) => {
@@ -162,7 +189,7 @@ function parseMustache(fileInput: string, paramsMap: Map<string, string>) {
         if (fileInput[j] == '}' && (j + 1 < size) && fileInput[j + 1] == '}') {
           const value = paramsMap.get(tag);
           if (!value) {
-            logError(`${tag} cannot be found in the param files`);
+            logError(`Missing param: ${tag}`);
           }
           fileOutput += value;
           i = j + 2;
@@ -212,7 +239,7 @@ function flattenObject(obj: any, path: string, map: Map<string, string>) {
     // obj is value
     if (map.has(path) && map.get(path) !== obj) {
       const oldValue = map.get(path);
-      logWarning(`${path} is overwritten from: ${oldValue} to ${obj}`);
+      logWarning(`Param overwritten: ${path} ${oldValue} => ${obj}`);
     }
     map.set(path, obj);
   }
@@ -229,6 +256,12 @@ function validateInput(param: string, argsMap: Map<string, string>, defaultValue
     process.exit(0);
   }
   return value;
+}
+
+function debugLog(log: string, isDebug = false) {
+  if (isDebug) {
+    console.log(log);
+  }
 }
 
 function logError(log: any, type = 'ERROR') {
