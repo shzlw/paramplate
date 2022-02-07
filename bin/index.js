@@ -98,14 +98,18 @@ function parseSrcDir(dir, paramsMap) {
             const currDir = path_1.default.dirname(fullPath);
             const filename = path_1.default.basename(fullPath);
             const originalFilename = isTemplateFile(filename);
-            const srcFile = fs_1.default.readFileSync(fullPath, 'utf8');
             if (originalFilename === null) {
                 const diff = currDir.substring(srcDir.length);
                 const destFilePath = path_1.default.join(destDir, diff, filename);
-                writeFile(destFilePath, srcFile);
+                fs_1.default.copyFile(fullPath, destFilePath, (err) => {
+                    if (err) {
+                        logError(err);
+                    }
+                });
             }
             else {
                 console.log(`- Parsing: ${fullPath}`);
+                const srcFile = fs_1.default.readFileSync(fullPath, 'utf8');
                 const content = parseMustache(srcFile, paramsMap);
                 const diff = currDir.substring(srcDir.length);
                 const destFilePath = path_1.default.join(destDir, diff, originalFilename);
