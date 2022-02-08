@@ -194,6 +194,7 @@ function parseMustache(fileInput: string, paramsMap: Map<string, string>) {
           const value = paramsMap.get(tag);
           if (!value) {
             logError(`Missing param: ${tag}`);
+            break;
           }
           fileOutput += value;
           i = j + 2;

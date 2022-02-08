@@ -2,13 +2,21 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-console.log("Testing CLI e2e");
+console.log('Testing CLI e2e');
+console.log('Run command');
+console.log('----------------------------');
+
+const testCommand = 'node ./bin/index.js --debug --params ./test/input/param1.json,./test/input/param2.json --src ./test/input/root --dest ./test/output/root';
+execSync(testCommand, {stdio: 'inherit'});
 
 const input = path.resolve(path.normalize('./test/output/root'));
 const expected = path.resolve(path.normalize('./test/expected/root'));
 
 compareTwoDirs(input, expected);
+
+console.log('----------------------------');
 console.log("Tests passed");
 
 function logAndExit(log, type = 'ERROR') {
