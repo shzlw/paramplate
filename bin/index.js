@@ -11,52 +11,77 @@ const COLORS = {
     fgRed: '\x1b[31m',
     fgYellow: '\x1b[33m'
 };
+const EMPTY_STR = '';
+const NO = 'n';
+const YES = 'y';
 const INPUT_ARGS = {
     params: '--params',
     src: '--src',
     dest: '--dest',
     ext: '--ext',
-    debug: '--debug'
+    debug: '--debug',
+    overwrite: '--overwrite',
+    validator: '--validator'
 };
 // Start
 console.log('################');
 console.log('Hello paramplate');
 console.log('################');
 console.log();
-const { paramsDirs, srcDir, destDir, templateExt, isDebug } = parseArgs();
-debugLog(`# Inputs`, isDebug);
+const { paramsDirs, srcDir, destDir, templateExt, isDebug, isOverwrite, validatorDirs } = parseArgs();
+debugLog('# Inputs', isDebug);
 debugLog(`- Src dir: ${srcDir}`, isDebug);
 debugLog(`- Dest dir: ${destDir}`, isDebug);
 debugLog(`- Template ext: ${templateExt}`, isDebug);
+debugLog(`- Enable param overwrite: ${isOverwrite}`, isDebug);
 const paramsFiles = paramsDirs.split(',');
 const paramsMap = new Map();
+debugLog('', isDebug);
+debugLog('# Parameter files', isDebug);
 paramsFiles.forEach((p) => {
     const paramsPath = path_1.default.resolve(path_1.default.normalize(p));
     debugLog(`- Param file: ${paramsPath}`, isDebug);
-    loadParams(paramsPath, paramsMap);
+    transformJsonFileToMap(paramsPath, paramsMap, isOverwrite);
 });
 if (isDebug) {
     console.log();
     console.log('# All parameters');
     for (let [key, value] of paramsMap) {
-        console.log(key + " = " + value);
+        console.log(key + "=" + value);
     }
 }
+const validatorMap = new Map();
+const isValidatorUsed = validatorDirs !== EMPTY_STR;
+if (isValidatorUsed) {
+    debugLog('', isDebug);
+    debugLog('# Validators', isDebug);
+    const validatorFiles = validatorDirs.split(',');
+    validatorFiles.forEach((p) => {
+        const validatorPath = path_1.default.resolve(path_1.default.normalize(p));
+        debugLog(`- Validator file: ${validatorPath}`, isDebug);
+        transformJsonFileToMap(validatorPath, validatorMap, isOverwrite);
+    });
+    validateParams(paramsMap, validatorMap);
+}
 console.log();
+debugLog('# Parsing starts', isDebug);
 parseSrcDir(srcDir, paramsMap);
-console.log();
 console.log('# Done!');
+// Utilities
 function parseArgs() {
-    const { params, src, dest, ext, debug } = INPUT_ARGS;
+    const { params, src, dest, ext, debug, overwrite, validator } = INPUT_ARGS;
     const defaultExt = '.pp';
-    const isDebugYes = 'y';
     const argsMap = new Map();
     const args = process.argv.slice(2);
     let i = 0;
     while (i < args.length) {
         const key = args[i];
         if (key === debug) {
-            argsMap.set(key, isDebugYes);
+            argsMap.set(key, YES);
+            i++;
+        }
+        else if (key == overwrite) {
+            argsMap.set(key, YES);
             i++;
         }
         else if (i + 1 < args.length) {
@@ -72,17 +97,21 @@ function parseArgs() {
             process.exit(0);
         }
     }
-    const srcDir = validateInput(src, argsMap);
-    const destDir = validateInput(dest, argsMap);
-    const paramsDirs = validateInput(params, argsMap);
-    const templateExt = validateInput(ext, argsMap, defaultExt);
-    const isDebug = validateInput(debug, argsMap) === isDebugYes ? true : false;
+    const srcDir = validateAndGet(src, argsMap);
+    const destDir = validateAndGet(dest, argsMap);
+    const paramsDirs = validateAndGet(params, argsMap);
+    const templateExt = validateAndGet(ext, argsMap, defaultExt);
+    const isDebug = validateAndGet(debug, argsMap, NO) === YES ? true : false;
+    const isOverwrite = validateAndGet(overwrite, argsMap, NO) === YES ? true : false;
+    const validatorDirs = validateAndGet(validator, argsMap, EMPTY_STR);
     return {
         paramsDirs,
         srcDir,
         destDir,
         templateExt,
-        isDebug
+        isDebug,
+        isOverwrite,
+        validatorDirs
     };
 }
 function parseSrcDir(dir, paramsMap) {
@@ -189,17 +218,35 @@ function parseMustache(fileInput, paramsMap) {
     }
     return fileOutput;
 }
-function loadParams(pathname, paramsMap) {
+function validateParams(paramsMap, validatorMap) {
+    for (let [key, value] of validatorMap) {
+        const reg = new RegExp(value);
+        if (paramsMap.has(key)) {
+            const paramValue = paramsMap.get(key);
+            if (paramValue && reg.test(paramValue)) {
+                debugLog(`Validating: key=${key}, value=${paramValue}, pattern=${value}`, isDebug);
+            }
+            else {
+                logError(`Validation failed: key=${key}, value=${paramValue}, pattern=${value}`);
+                process.exit(0);
+            }
+        }
+        else {
+            logWarning(`Missing validator param: ${key}`);
+        }
+    }
+}
+function transformJsonFileToMap(pathname, paramsMap, isOverwriteAllowed) {
     const file = fs_1.default.readFileSync(pathname, 'utf8').toString();
     const obj = JSON.parse(file);
-    flattenObject(obj, '', paramsMap);
+    flattenObject(obj, '', paramsMap, isOverwriteAllowed);
 }
-function flattenObject(obj, path, map) {
+function flattenObject(obj, path, map, isOverwriteAllowed) {
     if (typeof obj === 'object' && obj !== null) {
         if (Array.isArray(obj)) {
             // obj is array
             obj.forEach((nextObj, i) => {
-                flattenObject(nextObj, path + '[' + i + ']', map);
+                flattenObject(nextObj, path + '[' + i + ']', map, isOverwriteAllowed);
             });
         }
         else {
@@ -207,26 +254,36 @@ function flattenObject(obj, path, map) {
             const pathPrefix = path === '' ? '' : path + '.';
             Object.keys(obj).forEach((key) => {
                 const nextObj = obj[key];
-                flattenObject(nextObj, pathPrefix + key, map);
+                flattenObject(nextObj, pathPrefix + key, map, isOverwriteAllowed);
             });
         }
     }
     else {
         // obj is value
+        // Find one existing value in the map.
         if (map.has(path) && map.get(path) !== obj) {
             const oldValue = map.get(path);
-            logWarning(`Param overwritten: ${path} ${oldValue} => ${obj}`);
+            if (isOverwriteAllowed) {
+                logWarning(`Param overwritten: ${path} ${oldValue} => ${obj}`);
+                map.set(path, obj);
+            }
+            else {
+                logError(`Param overwritten: ${path} ${oldValue} => ${obj}`);
+                process.exit(0);
+            }
         }
-        map.set(path, obj);
+        else {
+            map.set(path, obj);
+        }
     }
 }
-function validateInput(param, argsMap, defaultValue) {
+function validateAndGet(param, argsMap, defaultValue) {
     const value = argsMap.get(param);
     if (!value) {
-        if (defaultValue) {
+        if (defaultValue || defaultValue === EMPTY_STR) {
             return defaultValue;
         }
-        logError(`${value} value is required`);
+        logError(`${param} arg is required`);
         process.exit(0);
     }
     return value;

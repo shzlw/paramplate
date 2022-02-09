@@ -1,0 +1,8 @@
+{
+  "param": {
+    "nestedParam2": {
+      "nestedParam3": "o*n"
+    }
+  },
+  "validatorNotFound": "123"
+}

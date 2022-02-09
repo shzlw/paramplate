@@ -104,9 +104,21 @@ Optional. Define the template file extension. After the template file is parsed,
 ```
 
 #### --debug
-Optional. Turn on debug logging.
+Optional. Turn on debug logging. Disabled by default.
 ```bash
 --debug
+```
+
+#### --overwrite
+Optional. Allow the parameters to be overwritten in parameter files and validator files. Disabled by default.
+```bash
+--overwrite
+```
+
+#### --validator
+Optional. Accept a list of json files which contain the regular expressions used for validating the parameters loaded from the parameter files. The values in the validator files are loaded by order and can be overwritten. For example
+```bash
+--validator /home/project/validator1.json,/home/project/validator2.json
 ```
 
 ## Templating
@@ -149,7 +161,8 @@ param1.json
   "array": [
     "element1",
     "element2"
-  ]
+  ],
+  "notAffected": "This will not be overwritten because it doesn't exist in param2.json"
 }
 ```
 
@@ -177,6 +190,37 @@ Two vaules are overwritten here.
 ```bash
 {{ array.[1] }}  # overwritten
 {{ param.nestedPram2.nestedPram3 }} # overwritten
+```
+
+## Validate parameters
+The parameters loaded from parameter files can be validated against given regular expressions. The json path of the object needs to match in both parameter file and validator file so the regular expression logic can kick in to search for a match.
+
+param.json
+```json
+{
+  "param": {
+    "nestedParam2": {
+      "nestedParam3": "nestedParam3"
+    }
+  },
+  "notValidated": "This will not be validated because it doesn't exist in validator.json"
+}
+```
+
+validator.json
+```json
+{
+  "param": {
+    "nestedParam2": {
+      "nestedParam3": "n*3"
+    }
+  }
+}
+```
+
+If we load the param.json and validator.json, "nestedParam3" will be validated against the regular expression: "n*3". If the validation fails, the program will display an error and exit.
+```
+npx paramplate --params param.json --validator validator.json ...
 ```
 
 ## Development
