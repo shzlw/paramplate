@@ -24,9 +24,8 @@ const INPUT_ARGS = {
 }
 
 // Start
-console.log('################');
 console.log('Hello paramplate');
-console.log('################');
+console.log('----------------');
 console.log();
 
 const {
